@@ -1,0 +1,125 @@
+{
+	"partitions" : [
+		{
+			"name" : "Top",
+			"pins" : [
+				{
+					"name" : "rs",
+					"strict" : false
+				},
+				{
+					"name" : "enable",
+					"strict" : false
+				},
+				{
+					"name" : "data[0]",
+					"strict" : false
+				},
+				{
+					"name" : "data[1]",
+					"strict" : false
+				},
+				{
+					"name" : "data[2]",
+					"strict" : false
+				},
+				{
+					"name" : "data[3]",
+					"strict" : false
+				},
+				{
+					"name" : "data[4]",
+					"strict" : false
+				},
+				{
+					"name" : "data[5]",
+					"strict" : false
+				},
+				{
+					"name" : "data[6]",
+					"strict" : false
+				},
+				{
+					"name" : "data[7]",
+					"strict" : false
+				},
+				{
+					"name" : "ready_i",
+					"strict" : false
+				},
+				{
+					"name" : "reset",
+					"strict" : false
+				},
+				{
+					"name" : "clk",
+					"strict" : false
+				},
+				{
+					"name" : "temperatura[0]",
+					"strict" : false
+				},
+				{
+					"name" : "humedad[7]",
+					"strict" : false
+				},
+				{
+					"name" : "humedad[6]",
+					"strict" : false
+				},
+				{
+					"name" : "humedad[5]",
+					"strict" : false
+				},
+				{
+					"name" : "humedad[4]",
+					"strict" : false
+				},
+				{
+					"name" : "humedad[3]",
+					"strict" : false
+				},
+				{
+					"name" : "humedad[2]",
+					"strict" : false
+				},
+				{
+					"name" : "temperatura[7]",
+					"strict" : false
+				},
+				{
+					"name" : "temperatura[6]",
+					"strict" : false
+				},
+				{
+					"name" : "temperatura[5]",
+					"strict" : false
+				},
+				{
+					"name" : "temperatura[4]",
+					"strict" : false
+				},
+				{
+					"name" : "temperatura[3]",
+					"strict" : false
+				},
+				{
+					"name" : "temperatura[2]",
+					"strict" : false
+				},
+				{
+					"name" : "temperatura[1]",
+					"strict" : false
+				},
+				{
+					"name" : "humedad[0]",
+					"strict" : false
+				},
+				{
+					"name" : "humedad[1]",
+					"strict" : false
+				}
+			]
+		}
+	]
+}

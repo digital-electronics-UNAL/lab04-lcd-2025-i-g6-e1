@@ -4,8 +4,10 @@ module LCD1602_controller #(parameter NUM_COMMANDS = 4,
                                       DATA_BITS = 8,
                                       COUNT_MAX = 800000)(
     input clk,            
-    input reset,          
+    input reset,          // reset activo en bajo
     input ready_i,
+    input [7:0] temperatura,
+    input [7:0] humedad,  // Nueva entrada para humedad
     output reg rs,        
     output reg rw,
     output enable,    
@@ -13,14 +15,24 @@ module LCD1602_controller #(parameter NUM_COMMANDS = 4,
 );
 
 // Definir los estados de la FSM
-localparam IDLE = 3'b000;
-localparam CONFIG_CMD1 = 3'b001;
-localparam WR_STATIC_TEXT_1L = 3'b010;
-localparam CONFIG_CMD2 = 3'b011;
-localparam WR_STATIC_TEXT_2L = 3'b100;
+localparam IDLE = 4'b0000;
+localparam CONFIG_CMD1 = 4'b0001;
+localparam WR_STATIC_TEXT_1L = 4'b0010;
+localparam CONFIG_CMD2 = 4'b0011;
+localparam WR_STATIC_TEXT_2L = 4'b0100;
+localparam SET_CURSOR_TEMP = 4'b0101;  // Nuevo estado para temperatura
+localparam WR_TEMP_CENT = 4'b0110;
+localparam WR_TEMP_DEC = 4'b0111;
+localparam WR_TEMP_UNI = 4'b1000;
+localparam SET_CURSOR_HUM = 4'b1001;   // Nuevo estado para humedad
+localparam WR_HUM_CENT = 4'b1010;
+localparam WR_HUM_DEC = 4'b1011;
+localparam WR_HUM_UNI = 4'b1100;
 
-reg [2:0] fsm_state;
-reg [2:0] next_state;
+reg [3:0] fsm_state;      // Ampliado a 4 bits
+reg [3:0] next_state;
+
+reg [2:0] flag;          // Ampliado para soportar más estados si es necesario
 reg clk_16ms;
 
 // Comandos de configuración
@@ -42,6 +54,10 @@ reg [$clog2(NUM_DATA_PERLINE):0] data_counter;
 reg [DATA_BITS-1:0] static_data_mem [0: NUM_DATA_ALL-1];
 reg [DATA_BITS-1:0] config_mem [0:NUM_COMMANDS-1]; 
 
+// Registros para los dígitos
+reg [7:0] temp_cent, temp_dec, temp_uni;
+reg [7:0] hum_cent, hum_dec, hum_uni;
+
 initial begin
     fsm_state <= IDLE;
     command_counter <= 'b0;
@@ -51,13 +67,22 @@ initial begin
     data <= 8'b0;
     clk_16ms <= 1'b0;
     clk_counter <= 'b0;
-    $readmemh("path_to_txt.txt", static_data_mem);    
+    $readmemh("/home/rustam/github-classroom/digital-electronics-UNAL/lab04-lcd-2025-i-g6-e1/src/data.txt", static_data_mem);    
 	config_mem[0] <= LINES2_MATRIX5x8_MODE8bit;
 	config_mem[1] <= SHIFT_CURSOR_RIGHT;
 	config_mem[2] <= DISPON_CURSOROFF;
 	config_mem[3] <= CLEAR_DISPLAY;
+	
+	// Inicializar dígitos
+	temp_cent <= 8'd0;
+	temp_dec <= 8'd0;
+	temp_uni <= 8'd0;
+	hum_cent <= 8'd0;
+	hum_dec <= 8'd0;
+	hum_uni <= 8'd0;
 end
 
+// Divisor de frecuencia para generar clk_16ms
 always @(posedge clk) begin
     if (clk_counter == COUNT_MAX-1) begin
         clk_16ms <= ~clk_16ms;
@@ -67,45 +92,90 @@ always @(posedge clk) begin
     end
 end
 
-
-always @(posedge clk_16ms)begin
-    if(reset == 0)begin
+// Actualización del estado de la FSM
+always @(posedge clk_16ms) begin
+    if(reset==0)begin
         fsm_state <= IDLE;
     end else begin
         fsm_state <= next_state;
     end
 end
 
+// Cálculo de dígitos (sincronizado con clk_16ms)
+always @(posedge clk_16ms) begin
+    if (reset) begin
+        // Calcular dígitos de temperatura
+        temp_cent <= (temperatura - temperatura%100)/100;
+        temp_dec <= (temperatura % 100 - temperatura%10) / 10;
+        temp_uni <= temperatura % 10;
+        
+        // Calcular dígitos de humedad
+        hum_cent <= (humedad - humedad%100)/100;
+        hum_dec <= (humedad % 100 - humedad% 10) / 10;
+        hum_uni <= humedad % 10;
+    end
+end
+
+// Lógica de transición de estados
 always @(*) begin
     case(fsm_state)
         IDLE: begin
-            next_state <= (ready_i)? CONFIG_CMD1 : IDLE;
+            next_state = (ready_i)? CONFIG_CMD1 : IDLE;
         end
         CONFIG_CMD1: begin 
-            next_state <= (command_counter == NUM_COMMANDS)? WR_STATIC_TEXT_1L : CONFIG_CMD1;
+            next_state = (command_counter == NUM_COMMANDS)? WR_STATIC_TEXT_1L : CONFIG_CMD1;
         end
         WR_STATIC_TEXT_1L:begin
-			next_state <= (data_counter == NUM_DATA_PERLINE)? CONFIG_CMD2 : WR_STATIC_TEXT_1L;
+			next_state = (data_counter == NUM_DATA_PERLINE)? CONFIG_CMD2 : WR_STATIC_TEXT_1L;
         end
         CONFIG_CMD2: begin 
-            next_state <= WR_STATIC_TEXT_2L;
+            next_state = WR_STATIC_TEXT_2L;
         end
 		WR_STATIC_TEXT_2L: begin
-			next_state <= (data_counter == NUM_DATA_PERLINE)? IDLE : WR_STATIC_TEXT_2L;
+			next_state = (data_counter == NUM_DATA_PERLINE)? SET_CURSOR_TEMP : WR_STATIC_TEXT_2L;
 		end
+        SET_CURSOR_TEMP: begin
+            next_state = WR_TEMP_CENT;
+        end
+        WR_TEMP_CENT: begin
+            next_state = WR_TEMP_DEC;
+        end
+        WR_TEMP_DEC: begin
+            next_state = WR_TEMP_UNI;
+        end
+        WR_TEMP_UNI: begin
+            next_state = SET_CURSOR_HUM;
+        end
+        SET_CURSOR_HUM: begin
+            next_state = WR_HUM_CENT;
+        end
+        WR_HUM_CENT: begin
+            next_state = WR_HUM_DEC;
+        end
+        WR_HUM_DEC: begin
+            next_state = WR_HUM_UNI;
+        end
+        WR_HUM_UNI: begin
+            next_state = SET_CURSOR_TEMP; // Volver a empezar
+        end
         default: next_state = IDLE;
     endcase
 end
 
+// Lógica de salida
 always @(posedge clk_16ms) begin
-    if (reset == 0) begin
+    if (reset==0) begin
+        flag <= 1'b0;
         command_counter <= 'b0;
         data_counter <= 'b0;
-		  data <= 'b0;
-        $readmemh("path_to_txt.txt", static_data_mem);
+        data <= 'b0;
+        rw <= 1'b0;
+        $readmemh("/home/rustam/github-classroom/digital-electronics-UNAL/lab04-lcd-2025-i-g6-e1/src/data.txt", static_data_mem);
     end else begin
+        rw <= 1'b0; // Siempre en modo escritura
         case (next_state)
             IDLE: begin
+                flag <= 1'b0;
                 command_counter <= 'b0;
                 data_counter <= 'b0;
                 rs <= 1'b0;
@@ -124,17 +194,51 @@ always @(posedge clk_16ms) begin
             CONFIG_CMD2: begin
                 data_counter <= 'b0;
 				rs <= 1'b0; 
-				data <= START_2LINE;
+				data <= START_2LINE; // Comando para mover el cursor a la segunda línea
             end
 			WR_STATIC_TEXT_2L: begin
                 data_counter <= data_counter + 1;
                 rs <= 1'b1; 
 				data <= static_data_mem[NUM_DATA_PERLINE + data_counter];
             end
+            SET_CURSOR_TEMP: begin
+                rs <= 1'b0; // Modo comando
+                // Mover cursor a la posición de temperatura: línea 1, columna 6
+                data <= 8'h80 + 6; // 0x80 para línea 1, +6 para columna 6
+            end
+            WR_TEMP_CENT: begin
+                rs <= 1'b1; // Modo datos
+                // Mostrar centena de temperatura (suprimir cero)
+                data <= (temp_cent == 0) ? 8'h20 : temp_cent + 8'd48;
+            end
+            WR_TEMP_DEC: begin
+                rs <= 1'b1;
+                data <= temp_dec + 8'd48; // ASCII para dígito
+            end
+            WR_TEMP_UNI: begin
+                rs <= 1'b1;
+                data <= temp_uni + 8'd48;
+            end
+            SET_CURSOR_HUM: begin
+                rs <= 1'b0;
+                // Mover cursor a la posición de humedad: línea 2, columna 9
+                data <= 8'hC0 + 9; // 0xC0 para línea 2, +9 para columna 9
+            end
+            WR_HUM_CENT: begin
+                rs <= 1'b1;
+                data <= (hum_cent == 0) ? 8'h20 : hum_cent + 8'd48;
+            end
+            WR_HUM_DEC: begin
+                rs <= 1'b1;
+                data <= hum_dec + 8'd48;
+            end
+            WR_HUM_UNI: begin
+                rs <= 1'b1;
+                data <= hum_uni + 8'd48;
+            end
         endcase
+        end 
     end
-end
 
-assign enable = clk_16ms;
-
+    assign enable = clk_16ms;
 endmodule

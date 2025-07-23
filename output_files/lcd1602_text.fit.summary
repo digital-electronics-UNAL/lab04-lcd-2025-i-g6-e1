@@ -1,0 +1,16 @@
+Fitter Status : Successful - Mon Jul 21 16:27:40 2025
+Quartus Prime Version : 24.1std.0 Build 1077 03/04/2025 SC Lite Edition
+Revision Name : lcd1602_text
+Top-level Entity Name : LCD1602_controller
+Family : Cyclone IV E
+Device : EP4CE10E22C8
+Timing Models : Final
+Total logic elements : 482 / 10,320 ( 5 % )
+    Total combinational functions : 475 / 10,320 ( 5 % )
+    Dedicated logic registers : 71 / 10,320 ( < 1 % )
+Total registers : 71
+Total pins : 30 / 92 ( 33 % )
+Total virtual pins : 0
+Total memory bits : 0 / 423,936 ( 0 % )
+Embedded Multiplier 9-bit elements : 0 / 46 ( 0 % )
+Total PLLs : 0 / 2 ( 0 % )
